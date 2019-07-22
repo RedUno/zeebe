@@ -11,6 +11,7 @@ import io.zeebe.engine.processor.workflow.BpmnStepContext;
 import io.zeebe.engine.processor.workflow.deployment.model.element.ExecutableFlowElement;
 import io.zeebe.engine.state.instance.ElementInstance;
 import io.zeebe.engine.state.instance.IndexedRecord;
+
 import java.util.List;
 
 /**
@@ -67,8 +68,12 @@ public class AbstractTerminalStateHandler<T extends ExecutableFlowElement>
       return false;
     }
 
+    // TODO (saig0): should use active paths (child + token) instead?
     final int activePaths = flowScopeInstance.getNumberOfActiveTokens();
-    assert activePaths >= 0 : "number of active paths should never be negative";
+    if (activePaths < 0) {
+      throw new RuntimeException(
+          "Number of active paths must not be negative. " + flowScopeInstance.toString());
+    }
 
     return activePaths == 1;
   }

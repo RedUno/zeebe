@@ -7,16 +7,16 @@
  */
 package io.zeebe.engine.state.instance;
 
-import static io.zeebe.db.impl.ZeebeDbConstants.ZB_DB_BYTE_ORDER;
-import static io.zeebe.util.buffer.BufferUtil.readIntoBuffer;
-import static io.zeebe.util.buffer.BufferUtil.writeIntoBuffer;
-
 import io.zeebe.db.DbValue;
 import io.zeebe.engine.processor.workflow.WorkflowInstanceLifecycle;
 import io.zeebe.protocol.impl.record.value.workflowinstance.WorkflowInstanceRecord;
 import io.zeebe.protocol.record.intent.WorkflowInstanceIntent;
 import org.agrona.DirectBuffer;
 import org.agrona.MutableDirectBuffer;
+
+import static io.zeebe.db.impl.ZeebeDbConstants.ZB_DB_BYTE_ORDER;
+import static io.zeebe.util.buffer.BufferUtil.readIntoBuffer;
+import static io.zeebe.util.buffer.BufferUtil.writeIntoBuffer;
 
 public class ElementInstance implements DbValue {
 
@@ -75,6 +75,10 @@ public class ElementInstance implements DbValue {
 
   public void decrementChildCount() {
     childCount--;
+
+    if (childCount < 0) {
+      throw new RuntimeException("Number of children must not be negative. " + this.toString());
+    }
   }
 
   public boolean canTerminate() {
@@ -95,6 +99,10 @@ public class ElementInstance implements DbValue {
 
   public void consumeToken() {
     this.activeTokens -= 1;
+
+    if (activeTokens < 0) {
+      throw new RuntimeException("Number of active token must not be negative. " + this.toString());
+    }
   }
 
   public int getNumberOfActiveTokens() {

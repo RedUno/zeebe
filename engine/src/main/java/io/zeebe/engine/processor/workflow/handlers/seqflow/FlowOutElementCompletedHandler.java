@@ -8,11 +8,13 @@
 package io.zeebe.engine.processor.workflow.handlers.seqflow;
 
 import io.zeebe.engine.processor.workflow.BpmnStepContext;
+import io.zeebe.engine.processor.workflow.deployment.model.element.ExecutableActivity;
 import io.zeebe.engine.processor.workflow.deployment.model.element.ExecutableFlowNode;
 import io.zeebe.engine.processor.workflow.deployment.model.element.ExecutableSequenceFlow;
 import io.zeebe.engine.processor.workflow.handlers.element.ElementCompletedHandler;
 import io.zeebe.engine.state.instance.ElementInstance;
 import io.zeebe.protocol.record.intent.WorkflowInstanceIntent;
+
 import java.util.List;
 
 /**
@@ -29,6 +31,33 @@ public class FlowOutElementCompletedHandler<T extends ExecutableFlowNode>
 
   @Override
   protected boolean handleState(BpmnStepContext<T> context) {
+
+    // TODO (saig0): clean up MI body - inner activity delegating code
+    if (context.getElement() instanceof ExecutableActivity
+        && ((ExecutableActivity) context.getElement()).hasLoopCharacteristics()) {
+
+      if (context
+          .getFlowScopeInstance()
+          .getValue()
+          .getElementIdBuffer()
+          .equals(context.getElement().getId())) {
+
+        System.out.println("> " + context.getFlowScopeInstance());
+
+        // an inner instance
+        return super.handleState(context);
+
+      } else {
+        // the multi instance body
+
+        // avoid to execute inner activity handler
+      }
+
+    } else {
+      // normal activity
+
+    }
+
     final List<ExecutableSequenceFlow> outgoing = context.getElement().getOutgoing();
 
     for (final ExecutableSequenceFlow flow : outgoing) {
@@ -36,6 +65,14 @@ public class FlowOutElementCompletedHandler<T extends ExecutableFlowNode>
     }
 
     return super.handleState(context);
+  }
+
+  private void takeSequenceFlows(BpmnStepContext<T> context) {
+    final List<ExecutableSequenceFlow> outgoing = context.getElement().getOutgoing();
+
+    for (final ExecutableSequenceFlow flow : outgoing) {
+      takeSequenceFlow(context, flow);
+    }
   }
 
   private void takeSequenceFlow(BpmnStepContext<T> context, ExecutableSequenceFlow flow) {

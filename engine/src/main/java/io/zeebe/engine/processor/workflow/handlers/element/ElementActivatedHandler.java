@@ -12,6 +12,7 @@ import io.zeebe.engine.processor.workflow.deployment.model.element.ExecutableAct
 import io.zeebe.engine.processor.workflow.deployment.model.element.ExecutableFlowNode;
 import io.zeebe.engine.processor.workflow.deployment.model.element.LoopCharacteristics;
 import io.zeebe.engine.processor.workflow.handlers.AbstractHandler;
+import io.zeebe.engine.state.instance.ElementInstance;
 import io.zeebe.engine.state.instance.VariablesState;
 import io.zeebe.msgpack.jsonpath.JsonPathQuery;
 import io.zeebe.msgpack.query.MsgPackQueryProcessor;
@@ -42,6 +43,7 @@ public class ElementActivatedHandler<T extends ExecutableFlowNode> extends Abstr
 
   @Override
   protected boolean handleState(BpmnStepContext<T> context) {
+    // TODO (saig0): clean up MI body - inner activity delegating code
     if (context.getElement() instanceof ExecutableActivity
         && ((ExecutableActivity) context.getElement()).hasLoopCharacteristics()) {
 
@@ -75,6 +77,8 @@ public class ElementActivatedHandler<T extends ExecutableFlowNode> extends Abstr
 
         // TODO (saig0): handle empty input collection
 
+        final ElementInstance elementInstance = context.getElementInstance();
+
         // spawn instances
         result.readArray(
             item -> {
@@ -84,7 +88,10 @@ public class ElementActivatedHandler<T extends ExecutableFlowNode> extends Abstr
                       .getOutput()
                       .appendNewEvent(WorkflowInstanceIntent.ELEMENT_ACTIVATING, instanceRecord);
 
-              // TODO (saig0): set input element variable
+              // TODO (saig0): don't spawn token if children are created
+              context.getElementInstanceState().spawnToken(context.getKey());
+
+              // TODO (saig0): handle empty (not-existing) input element variable
               final MsgPackWriter msgPackWriter = new MsgPackWriter();
               final ExpandableArrayBuffer valueBuffer = new ExpandableArrayBuffer();
               msgPackWriter.wrap(valueBuffer, 0);
