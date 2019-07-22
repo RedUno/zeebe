@@ -10,15 +10,21 @@ package io.zeebe.engine.processor.workflow.handlers.element;
 import io.zeebe.engine.processor.workflow.BpmnStepContext;
 import io.zeebe.engine.processor.workflow.deployment.model.element.ExecutableActivity;
 import io.zeebe.engine.processor.workflow.deployment.model.element.ExecutableFlowNode;
+import io.zeebe.engine.processor.workflow.deployment.model.element.LoopCharacteristics;
 import io.zeebe.engine.processor.workflow.handlers.AbstractHandler;
 import io.zeebe.engine.state.instance.VariablesState;
 import io.zeebe.msgpack.jsonpath.JsonPathQuery;
 import io.zeebe.msgpack.query.MsgPackQueryProcessor;
-import io.zeebe.msgpack.spec.MsgPackToken;
+import io.zeebe.msgpack.spec.MsgPackWriter;
 import io.zeebe.protocol.impl.record.value.workflowinstance.WorkflowInstanceRecord;
 import io.zeebe.protocol.record.intent.WorkflowInstanceIntent;
-import java.util.Collections;
+import io.zeebe.util.buffer.BufferUtil;
 import org.agrona.DirectBuffer;
+import org.agrona.ExpandableArrayBuffer;
+import org.agrona.concurrent.UnsafeBuffer;
+
+import java.util.Arrays;
+import java.util.Collections;
 
 /**
  * Represents the "business logic" phase the element, so the base handler does nothing.
@@ -51,10 +57,9 @@ public class ElementActivatedHandler<T extends ExecutableFlowNode> extends Abstr
         // the multi instance body
 
         final VariablesState variablesState = context.getElementInstanceState().getVariablesState();
-        final JsonPathQuery inputCollection =
-            ((ExecutableActivity) context.getElement())
-                .getLoopCharacteristics()
-                .getInputCollection();
+        final LoopCharacteristics loopCharacteristics =
+            ((ExecutableActivity) context.getElement()).getLoopCharacteristics();
+        final JsonPathQuery inputCollection = loopCharacteristics.getInputCollection();
         final DirectBuffer variableName = inputCollection.getVariableName();
         final DirectBuffer variablesAsDocument =
             variablesState.getVariablesAsDocument(
@@ -64,23 +69,44 @@ public class ElementActivatedHandler<T extends ExecutableFlowNode> extends Abstr
         final MsgPackQueryProcessor.QueryResults results =
             queryProcessor.process(inputCollection, variablesAsDocument);
 
-        final MsgPackToken token = results.getSingleResult().getToken();
-        final int size = token.getSize();
+        final MsgPackQueryProcessor.QueryResult result = results.getSingleResult();
+
+        final WorkflowInstanceRecord instanceRecord = context.getValue();
 
         // TODO (saig0): handle empty input collection
 
         // spawn instances
-        final WorkflowInstanceRecord value = context.getValue();
+        result.readArray(
+            item -> {
+              instanceRecord.setFlowScopeKey(context.getKey());
+              final long elementInstanceKey =
+                  context
+                      .getOutput()
+                      .appendNewEvent(WorkflowInstanceIntent.ELEMENT_ACTIVATING, instanceRecord);
 
-        for (int i = 0; i < size; i++) {
-          value.setFlowScopeKey(context.getKey());
-          final long elementInstanceKey =
-              context.getOutput().appendNewEvent(WorkflowInstanceIntent.ELEMENT_ACTIVATING, value);
+              // TODO (saig0): set input element variable
+              final MsgPackWriter msgPackWriter = new MsgPackWriter();
+              final ExpandableArrayBuffer valueBuffer = new ExpandableArrayBuffer();
+              msgPackWriter.wrap(valueBuffer, 0);
 
-          // TODO (saig0): set input element variable
-        }
+              Arrays.stream(loopCharacteristics.getInputElement().getPathElements())
+                  .skip(1) // skip document root $
+                  .forEach(
+                      path -> {
+                        msgPackWriter.writeMapHeader(1);
+                        msgPackWriter.writeString(BufferUtil.wrapString(path));
+                      });
 
-        return true;
+              msgPackWriter.writeRaw(item);
+
+              final DirectBuffer document =
+                  new UnsafeBuffer(valueBuffer, 0, msgPackWriter.getOffset());
+              variablesState.setVariablesLocalFromDocument(
+                  elementInstanceKey, instanceRecord.getWorkflowKey(), document);
+            });
+
+        // avoid to execute inner activity handler
+        return false;
       }
 
     } else {

@@ -11,6 +11,7 @@ import io.zeebe.engine.util.EngineRule;
 import io.zeebe.model.bpmn.Bpmn;
 import io.zeebe.model.bpmn.BpmnModelInstance;
 import io.zeebe.protocol.record.intent.JobIntent;
+import io.zeebe.protocol.record.intent.VariableIntent;
 import io.zeebe.protocol.record.intent.WorkflowInstanceIntent;
 import io.zeebe.test.util.record.RecordingExporter;
 import io.zeebe.test.util.record.RecordingExporterTestWatcher;
@@ -79,5 +80,41 @@ public class MultiInstanceTest {
                 .withWorkflowInstanceKey(workflowInstanceKey)
                 .limit(3))
         .hasSize(3);
+  }
+
+  @Test
+  public void shouldSetInputElementVariable() {
+    ENGINE.deployment().withXmlResource(WORKFLOW_MI_PARALLEL_SERVICE_TASK).deploy();
+
+    final long workflowInstanceKey =
+        ENGINE
+            .workflowInstance()
+            .ofBpmnProcessId(PROCESS_ID)
+            .withVariable("items", Arrays.asList("a", "b", "c"))
+            .create();
+
+    RecordingExporter.jobRecords(JobIntent.CREATED)
+        .withWorkflowInstanceKey(workflowInstanceKey)
+        .limit(3)
+        .exists();
+
+    ENGINE.jobs().withType("test").activate();
+
+    assertThat(
+            RecordingExporter.jobRecords(JobIntent.ACTIVATED)
+                .withWorkflowInstanceKey(workflowInstanceKey)
+                .limit(3))
+        .extracting(r -> r.getValue().getVariables().get("item"))
+        .hasSize(3)
+        .contains("a", "b", "c");
+
+    assertThat(
+            RecordingExporter.variableRecords(VariableIntent.CREATED)
+                .withName("item")
+                .withWorkflowInstanceKey(workflowInstanceKey)
+                .limit(3))
+        .hasSize(3)
+        .extracting(r -> r.getValue().getValue())
+        .contains("\"a\"", "\"b\"", "\"c\"");
   }
 }

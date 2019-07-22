@@ -14,6 +14,8 @@ import io.zeebe.msgpack.spec.MsgPackType;
 import org.agrona.DirectBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 
+import java.util.function.Consumer;
+
 public class MsgPackQueryProcessor {
 
   private final MsgPackQueryExecutor queryExecutor = new MsgPackQueryExecutor();
@@ -106,6 +108,29 @@ public class MsgPackQueryProcessor {
 
     public boolean isArray() {
       return token.getType() == MsgPackType.ARRAY;
+    }
+
+    public int readArray(Consumer<DirectBuffer> itemConsumer) {
+      if (!isArray()) {
+        throw new RuntimeException(String.format("expected Array but found '%s'", token.getType()));
+      }
+
+      final int size = token.getSize();
+
+      for (int i = 0; i < size; i++) {
+
+        final int offsetBefore = reader.getOffset();
+        reader.skipValue();
+        final int offsetAfter = reader.getOffset();
+        final int length = offsetAfter - offsetBefore;
+
+        final UnsafeBuffer elementBuffer = new UnsafeBuffer();
+        elementBuffer.wrap(reader.getBuffer(), offsetBefore, length);
+
+        itemConsumer.accept(elementBuffer);
+      }
+
+      return size;
     }
 
     public MsgPackToken getToken() {
