@@ -13,13 +13,10 @@ import io.zeebe.model.bpmn.BpmnModelInstance;
 import io.zeebe.model.bpmn.builder.MultiInstanceLoopCharacteristicsBuilder;
 import io.zeebe.protocol.record.Assertions;
 import io.zeebe.protocol.record.Record;
-import io.zeebe.protocol.record.intent.IncidentIntent;
 import io.zeebe.protocol.record.intent.JobIntent;
 import io.zeebe.protocol.record.intent.VariableIntent;
 import io.zeebe.protocol.record.intent.WorkflowInstanceIntent;
 import io.zeebe.protocol.record.value.BpmnElementType;
-import io.zeebe.protocol.record.value.ErrorType;
-import io.zeebe.protocol.record.value.IncidentRecordValue;
 import io.zeebe.protocol.record.value.WorkflowInstanceRecordValue;
 import io.zeebe.test.util.record.RecordingExporter;
 import io.zeebe.test.util.record.RecordingExporterTestWatcher;
@@ -323,102 +320,5 @@ public class MultiInstanceTest {
         .hasSize(3)
         .flatExtracting(r -> r.getValue().getVariables().keySet())
         .containsOnly(INPUT_COLLECTION);
-  }
-
-  @Test
-  public void shouldCreateIncidentIfInputVariableNotFound() {
-    // given
-    ENGINE.deployment().withXmlResource(WORKFLOW).deploy();
-
-    // when
-    final long workflowInstanceKey = ENGINE.workflowInstance().ofBpmnProcessId(PROCESS_ID).create();
-
-    // then
-    final Record<IncidentRecordValue> incident =
-        RecordingExporter.incidentRecords(IncidentIntent.CREATED)
-            .withWorkflowInstanceKey(workflowInstanceKey)
-            .getFirst();
-
-    final Record<WorkflowInstanceRecordValue> elementInstance =
-        RecordingExporter.workflowInstanceRecords(WorkflowInstanceIntent.ELEMENT_ACTIVATING)
-            .withWorkflowInstanceKey(workflowInstanceKey)
-            .withElementId(ELEMENT_ID)
-            .getFirst();
-
-    Assertions.assertThat(incident.getValue())
-        .hasElementInstanceKey(elementInstance.getKey())
-        .hasElementId(elementInstance.getValue().getElementId())
-        .hasErrorType(ErrorType.EXTRACT_VALUE_ERROR)
-        .hasErrorMessage(
-            "Expected multi-instance input collection variable '"
-                + INPUT_COLLECTION
-                + "' to be an ARRAY, but not found.");
-
-    // when resolve incident
-    ENGINE
-        .variables()
-        .ofScope(incident.getValue().getVariableScopeKey())
-        .withDocument(Collections.singletonMap(INPUT_COLLECTION, Arrays.asList(1, 2, 3)))
-        .update();
-
-    ENGINE.incident().ofInstance(workflowInstanceKey).withKey(incident.getKey()).resolve();
-
-    assertThat(
-            RecordingExporter.workflowInstanceRecords()
-                .withRecordKey(elementInstance.getKey())
-                .limit(2))
-        .extracting(Record::getIntent)
-        .contains(WorkflowInstanceIntent.ELEMENT_ACTIVATED);
-  }
-
-  @Test
-  public void shouldCreateIncidentIfInputVariableIsNotAnArray() {
-    // given
-    ENGINE.deployment().withXmlResource(WORKFLOW).deploy();
-
-    // when
-    final long workflowInstanceKey =
-        ENGINE
-            .workflowInstance()
-            .ofBpmnProcessId(PROCESS_ID)
-            .withVariable(INPUT_COLLECTION, "no-an-array")
-            .create();
-
-    // then
-    final Record<IncidentRecordValue> incident =
-        RecordingExporter.incidentRecords(IncidentIntent.CREATED)
-            .withWorkflowInstanceKey(workflowInstanceKey)
-            .getFirst();
-
-    final Record<WorkflowInstanceRecordValue> elementInstance =
-        RecordingExporter.workflowInstanceRecords(WorkflowInstanceIntent.ELEMENT_ACTIVATING)
-            .withWorkflowInstanceKey(workflowInstanceKey)
-            .withElementId(ELEMENT_ID)
-            .getFirst();
-
-    Assertions.assertThat(incident.getValue())
-        .hasElementInstanceKey(elementInstance.getKey())
-        .hasElementId(elementInstance.getValue().getElementId())
-        .hasErrorType(ErrorType.EXTRACT_VALUE_ERROR)
-        .hasErrorMessage(
-            "Expected multi-instance input collection variable '"
-                + INPUT_COLLECTION
-                + "' to be an ARRAY, but found 'STRING'.");
-
-    // when resolve incident
-    ENGINE
-        .variables()
-        .ofScope(incident.getValue().getVariableScopeKey())
-        .withDocument(Collections.singletonMap(INPUT_COLLECTION, Arrays.asList(1, 2, 3)))
-        .update();
-
-    ENGINE.incident().ofInstance(workflowInstanceKey).withKey(incident.getKey()).resolve();
-
-    assertThat(
-            RecordingExporter.workflowInstanceRecords()
-                .withRecordKey(elementInstance.getKey())
-                .limit(2))
-        .extracting(Record::getIntent)
-        .contains(WorkflowInstanceIntent.ELEMENT_ACTIVATED);
   }
 }
