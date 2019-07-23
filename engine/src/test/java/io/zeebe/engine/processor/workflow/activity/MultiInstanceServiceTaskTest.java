@@ -80,8 +80,7 @@ public class MultiInstanceServiceTaskTest {
             .getFirst();
 
     Assertions.assertThat(multiInstanceBody.getValue())
-        .hasBpmnElementType(
-            BpmnElementType.SERVICE_TASK) // TODO (saig0): should have a special type?
+        .hasBpmnElementType(BpmnElementType.SERVICE_TASK)
         .hasFlowScopeKey(workflowInstanceKey);
 
     assertThat(
