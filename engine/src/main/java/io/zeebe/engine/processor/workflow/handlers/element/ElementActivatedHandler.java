@@ -75,42 +75,47 @@ public class ElementActivatedHandler<T extends ExecutableFlowNode> extends Abstr
 
         final WorkflowInstanceRecord instanceRecord = context.getValue();
 
-        // TODO (saig0): handle empty input collection
-
         final ElementInstance elementInstance = context.getElementInstance();
 
         // spawn instances
-        result.readArray(
-            item -> {
-              instanceRecord.setFlowScopeKey(context.getKey());
-              final long elementInstanceKey =
-                  context
-                      .getOutput()
-                      .appendNewEvent(WorkflowInstanceIntent.ELEMENT_ACTIVATING, instanceRecord);
+        final int size =
+            result.readArray(
+                item -> {
+                  instanceRecord.setFlowScopeKey(context.getKey());
+                  final long elementInstanceKey =
+                      context
+                          .getOutput()
+                          .appendNewEvent(
+                              WorkflowInstanceIntent.ELEMENT_ACTIVATING, instanceRecord);
 
-              // TODO (saig0): don't spawn token if children are created
-              context.getElementInstanceState().spawnToken(context.getKey());
+                  // TODO (saig0): don't spawn token if children are created
+                  context.getElementInstanceState().spawnToken(context.getKey());
 
-              // TODO (saig0): handle empty (not-existing) input element variable
-              final MsgPackWriter msgPackWriter = new MsgPackWriter();
-              final ExpandableArrayBuffer valueBuffer = new ExpandableArrayBuffer();
-              msgPackWriter.wrap(valueBuffer, 0);
+                  // TODO (saig0): handle empty (not-existing) input element variable
+                  final MsgPackWriter msgPackWriter = new MsgPackWriter();
+                  final ExpandableArrayBuffer valueBuffer = new ExpandableArrayBuffer();
+                  msgPackWriter.wrap(valueBuffer, 0);
 
-              Arrays.stream(loopCharacteristics.getInputElement().getPathElements())
-                  .skip(1) // skip document root $
-                  .forEach(
-                      path -> {
-                        msgPackWriter.writeMapHeader(1);
-                        msgPackWriter.writeString(BufferUtil.wrapString(path));
-                      });
+                  Arrays.stream(loopCharacteristics.getInputElement().getPathElements())
+                      .skip(1) // skip document root $
+                      .forEach(
+                          path -> {
+                            msgPackWriter.writeMapHeader(1);
+                            msgPackWriter.writeString(BufferUtil.wrapString(path));
+                          });
 
-              msgPackWriter.writeRaw(item);
+                  msgPackWriter.writeRaw(item);
 
-              final DirectBuffer document =
-                  new UnsafeBuffer(valueBuffer, 0, msgPackWriter.getOffset());
-              variablesState.setVariablesLocalFromDocument(
-                  elementInstanceKey, instanceRecord.getWorkflowKey(), document);
-            });
+                  final DirectBuffer document =
+                      new UnsafeBuffer(valueBuffer, 0, msgPackWriter.getOffset());
+                  variablesState.setVariablesLocalFromDocument(
+                      elementInstanceKey, instanceRecord.getWorkflowKey(), document);
+                });
+
+        if (size == 0) {
+          // TODO (saig0): handle empty input collection
+          transitionTo(context, WorkflowInstanceIntent.ELEMENT_COMPLETING);
+        }
 
         // avoid to execute inner activity handler
         return false;

@@ -110,6 +110,7 @@ public class MsgPackQueryProcessor {
       return token.getType() == MsgPackType.ARRAY;
     }
 
+    // TODO (saig0): write some tests
     public int readArray(Consumer<DirectBuffer> itemConsumer) {
       if (!isArray()) {
         throw new RuntimeException(String.format("expected Array but found '%s'", token.getType()));

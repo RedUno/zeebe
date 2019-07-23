@@ -42,8 +42,6 @@ public class FlowOutElementCompletedHandler<T extends ExecutableFlowNode>
           .getElementIdBuffer()
           .equals(context.getElement().getId())) {
 
-        System.out.println("> " + context.getFlowScopeInstance());
-
         // an inner instance
         return super.handleState(context);
 

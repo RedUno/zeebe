@@ -22,6 +22,7 @@ import org.junit.Rule;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.Collections;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -141,10 +142,7 @@ public class MultiInstanceTest {
     activatedRecord
         .getValue()
         .getJobKeys()
-        .forEach(
-            jobKey -> {
-              ENGINE.job().withKey(jobKey).complete();
-            });
+        .forEach(jobKey -> ENGINE.job().withKey(jobKey).complete());
 
     assertThat(
             RecordingExporter.workflowInstanceRecords(WorkflowInstanceIntent.ELEMENT_COMPLETED)
@@ -152,6 +150,38 @@ public class MultiInstanceTest {
                 .withElementId("task")
                 .limit(4))
         .hasSize(4);
+
+    assertThat(
+            RecordingExporter.workflowInstanceRecords(WorkflowInstanceIntent.ELEMENT_COMPLETED)
+                .withRecordKey(workflowInstanceKey)
+                .limitToWorkflowInstanceCompleted()
+                .exists())
+        .isTrue();
+  }
+
+  @Test
+  public void shouldSkipIfCollectionIsEmpty() {
+    ENGINE.deployment().withXmlResource(WORKFLOW_MI_PARALLEL_SERVICE_TASK).deploy();
+
+    final long workflowInstanceKey =
+        ENGINE
+            .workflowInstance()
+            .ofBpmnProcessId(PROCESS_ID)
+            .withVariable("items", Collections.emptyList())
+            .create();
+
+    assertThat(
+            RecordingExporter.workflowInstanceRecords()
+                .withWorkflowInstanceKey(workflowInstanceKey)
+                .withElementId("task")
+                .limit(4))
+        .hasSize(4)
+        .extracting(Record::getIntent)
+        .containsExactly(
+            WorkflowInstanceIntent.ELEMENT_ACTIVATING,
+            WorkflowInstanceIntent.ELEMENT_ACTIVATED,
+            WorkflowInstanceIntent.ELEMENT_COMPLETING,
+            WorkflowInstanceIntent.ELEMENT_COMPLETED);
 
     assertThat(
             RecordingExporter.workflowInstanceRecords(WorkflowInstanceIntent.ELEMENT_COMPLETED)
