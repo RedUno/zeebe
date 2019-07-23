@@ -12,7 +12,6 @@ import io.zeebe.engine.processor.workflow.deployment.model.element.ExecutableAct
 import io.zeebe.engine.processor.workflow.deployment.model.element.ExecutableFlowNode;
 import io.zeebe.engine.processor.workflow.deployment.model.element.LoopCharacteristics;
 import io.zeebe.engine.processor.workflow.handlers.AbstractHandler;
-import io.zeebe.engine.state.instance.ElementInstance;
 import io.zeebe.engine.state.instance.VariablesState;
 import io.zeebe.msgpack.jsonpath.JsonPathQuery;
 import io.zeebe.msgpack.query.MsgPackQueryProcessor;
@@ -67,15 +66,12 @@ public class ElementActivatedHandler<T extends ExecutableFlowNode> extends Abstr
             variablesState.getVariablesAsDocument(
                 context.getKey(), Collections.singleton(variableName));
 
-        final MsgPackQueryProcessor queryProcessor = new MsgPackQueryProcessor();
-        final MsgPackQueryProcessor.QueryResults results =
-            queryProcessor.process(inputCollection, variablesAsDocument);
+        final MsgPackQueryProcessor queryProcessor = new MsgPackQueryProcessor();        ;
 
-        final MsgPackQueryProcessor.QueryResult result = results.getSingleResult();
+        final MsgPackQueryProcessor.QueryResult result =
+            queryProcessor.process(inputCollection, variablesAsDocument).getSingleResult();
 
         final WorkflowInstanceRecord instanceRecord = context.getValue();
-
-        final ElementInstance elementInstance = context.getElementInstance();
 
         // spawn instances
         final int size =

@@ -13,15 +13,17 @@ import io.zeebe.engine.state.instance.VariablesState;
 import io.zeebe.msgpack.mapping.Mapping;
 import io.zeebe.msgpack.mapping.MsgPackMergeTool;
 import io.zeebe.protocol.impl.record.value.workflowinstance.WorkflowInstanceRecord;
+import org.agrona.DirectBuffer;
+
 import java.util.HashSet;
 import java.util.Set;
-import org.agrona.DirectBuffer;
 
 public class IOMappingHelper {
 
+  private final MsgPackMergeTool mergeTool = new MsgPackMergeTool(4096);
+
   public <T extends ExecutableFlowNode> void applyOutputMappings(BpmnStepContext<T> context) {
     final VariablesState variablesState = context.getElementInstanceState().getVariablesState();
-    final MsgPackMergeTool mergeTool = context.getMergeTool();
 
     final T element = context.getElement();
     final WorkflowInstanceRecord record = context.getValue();
@@ -60,7 +62,6 @@ public class IOMappingHelper {
 
   public <T extends ExecutableFlowNode> void applyInputMappings(BpmnStepContext<T> context) {
 
-    final MsgPackMergeTool mergeTool = context.getMergeTool();
     final T element = context.getElement();
     final Mapping[] mappings = element.getInputMappings();
 
