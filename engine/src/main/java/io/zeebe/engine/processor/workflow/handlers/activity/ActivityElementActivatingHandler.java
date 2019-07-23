@@ -18,8 +18,9 @@ import io.zeebe.msgpack.query.MsgPackQueryProcessor;
 import io.zeebe.protocol.record.intent.WorkflowInstanceIntent;
 import io.zeebe.protocol.record.value.ErrorType;
 import io.zeebe.util.buffer.BufferUtil;
-import java.util.Collections;
 import org.agrona.DirectBuffer;
+
+import java.util.Collections;
 
 public class ActivityElementActivatingHandler<T extends ExecutableActivity>
     extends ElementActivatingHandler<T> {
@@ -76,7 +77,7 @@ public class ActivityElementActivatingHandler<T extends ExecutableActivity>
           context.raiseIncident(
               ErrorType.EXTRACT_VALUE_ERROR,
               String.format(
-                  "Multi-Instance variable '%s' not found.",
+                  "Expected multi-instance input collection variable '%s' to be an ARRAY, but not found.",
                   BufferUtil.bufferAsString(variableName)));
           return false;
 
@@ -84,8 +85,9 @@ public class ActivityElementActivatingHandler<T extends ExecutableActivity>
           context.raiseIncident(
               ErrorType.EXTRACT_VALUE_ERROR,
               String.format(
-                  "Multi-Instance variable '%s' is not an array.",
-                  BufferUtil.bufferAsString(variableName)));
+                  "Expected multi-instance input collection variable '%s' to be an ARRAY, but found '%s'.",
+                  BufferUtil.bufferAsString(variableName),
+                  results.getSingleResult().getToken().getType().name()));
           return false;
         }
 

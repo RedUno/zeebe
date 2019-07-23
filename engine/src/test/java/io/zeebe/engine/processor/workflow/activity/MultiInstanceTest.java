@@ -10,11 +10,16 @@ package io.zeebe.engine.processor.workflow.activity;
 import io.zeebe.engine.util.EngineRule;
 import io.zeebe.model.bpmn.Bpmn;
 import io.zeebe.model.bpmn.BpmnModelInstance;
+import io.zeebe.protocol.record.Assertions;
 import io.zeebe.protocol.record.Record;
+import io.zeebe.protocol.record.intent.IncidentIntent;
 import io.zeebe.protocol.record.intent.JobIntent;
 import io.zeebe.protocol.record.intent.VariableIntent;
 import io.zeebe.protocol.record.intent.WorkflowInstanceIntent;
+import io.zeebe.protocol.record.value.ErrorType;
+import io.zeebe.protocol.record.value.IncidentRecordValue;
 import io.zeebe.protocol.record.value.JobBatchRecordValue;
+import io.zeebe.protocol.record.value.WorkflowInstanceRecordValue;
 import io.zeebe.test.util.record.RecordingExporter;
 import io.zeebe.test.util.record.RecordingExporterTestWatcher;
 import org.junit.ClassRule;
@@ -227,5 +232,60 @@ public class MultiInstanceTest {
         .hasSize(3)
         .flatExtracting(r -> r.getValue().getVariables().keySet())
         .containsOnly("items");
+  }
+
+  @Test
+  public void shouldCreateIncidentIfInputVariableNotFound() {
+    ENGINE.deployment().withXmlResource(WORKFLOW_MI_PARALLEL_SERVICE_TASK).deploy();
+
+    final long workflowInstanceKey = ENGINE.workflowInstance().ofBpmnProcessId(PROCESS_ID).create();
+
+    final Record<WorkflowInstanceRecordValue> elementActivating =
+        RecordingExporter.workflowInstanceRecords(WorkflowInstanceIntent.ELEMENT_ACTIVATING)
+            .withWorkflowInstanceKey(workflowInstanceKey)
+            .withElementId("task")
+            .getFirst();
+
+    final Record<IncidentRecordValue> incidentCreated =
+        RecordingExporter.incidentRecords(IncidentIntent.CREATED)
+            .withWorkflowInstanceKey(workflowInstanceKey)
+            .getFirst();
+
+    Assertions.assertThat(incidentCreated.getValue())
+        .hasElementInstanceKey(elementActivating.getKey())
+        .hasElementId(elementActivating.getValue().getElementId())
+        .hasErrorType(ErrorType.EXTRACT_VALUE_ERROR)
+        .hasErrorMessage(
+            "Expected multi-instance input collection variable 'items' to be an ARRAY, but not found.");
+  }
+
+  @Test
+  public void shouldCreateIncidentIfInputVariableIsNotAnArray() {
+    ENGINE.deployment().withXmlResource(WORKFLOW_MI_PARALLEL_SERVICE_TASK).deploy();
+
+    final long workflowInstanceKey =
+        ENGINE
+            .workflowInstance()
+            .ofBpmnProcessId(PROCESS_ID)
+            .withVariable("items", "1,2,3")
+            .create();
+
+    final Record<WorkflowInstanceRecordValue> elementActivating =
+        RecordingExporter.workflowInstanceRecords(WorkflowInstanceIntent.ELEMENT_ACTIVATING)
+            .withWorkflowInstanceKey(workflowInstanceKey)
+            .withElementId("task")
+            .getFirst();
+
+    final Record<IncidentRecordValue> incidentCreated =
+        RecordingExporter.incidentRecords(IncidentIntent.CREATED)
+            .withWorkflowInstanceKey(workflowInstanceKey)
+            .getFirst();
+
+    Assertions.assertThat(incidentCreated.getValue())
+        .hasElementInstanceKey(elementActivating.getKey())
+        .hasVariableScopeKey(workflowInstanceKey)
+        .hasErrorType(ErrorType.EXTRACT_VALUE_ERROR)
+        .hasErrorMessage(
+            "Expected multi-instance input collection variable 'items' to be an ARRAY, but found 'STRING'.");
   }
 }

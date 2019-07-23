@@ -100,7 +100,7 @@ public class ElementActivatedHandler<T extends ExecutableFlowNode> extends Abstr
                             msgPackWriter.wrap(valueBuffer, 0);
 
                             Arrays.stream(inputElement.getPathElements())
-                                .skip(1) // // TODO (saig0): skip document root $
+                                .skip(1) // TODO (saig0): skip document root $
                                 .forEach(
                                     path -> {
                                       msgPackWriter.writeMapHeader(1);
