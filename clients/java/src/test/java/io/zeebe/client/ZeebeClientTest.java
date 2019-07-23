@@ -18,10 +18,15 @@ package io.zeebe.client;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import io.zeebe.client.util.ClientTest;
+import java.io.FileNotFoundException;
 import java.time.Duration;
+import org.hamcrest.core.IsInstanceOf;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 public class ZeebeClientTest extends ClientTest {
+  @Rule public ExpectedException thrown = ExpectedException.none();
 
   @Test
   public void shouldNotFailIfClosedTwice() {
@@ -46,5 +51,20 @@ public class ZeebeClientTest extends ClientTest {
       assertThat(configuration.getDefaultMessageTimeToLive()).isEqualTo(Duration.ofHours(1));
       assertThat(configuration.getDefaultRequestTimeout()).isEqualTo(Duration.ofSeconds(20));
     }
+  }
+
+  @Test
+  public void shouldFailIfCertificateDoesNotExist() {
+    // given
+    thrown.expectCause(IsInstanceOf.instanceOf(FileNotFoundException.class));
+
+    // when
+    ZeebeClient.newClientBuilder().useSecureConnection().caCertificatePath("/wrong/path").build();
+  }
+
+  @Test
+  public void shouldAllowEmptyCertificatePath() {
+    // when
+    ZeebeClient.newClientBuilder().useSecureConnection().caCertificatePath("").build();
   }
 }
