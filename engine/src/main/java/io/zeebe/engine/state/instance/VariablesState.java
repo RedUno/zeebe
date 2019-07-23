@@ -120,7 +120,7 @@ public class VariablesState {
     }
   }
 
-  void setVariableLocal(
+  public void setVariableLocal(
       long scopeKey,
       long workflowKey,
       DirectBuffer name,

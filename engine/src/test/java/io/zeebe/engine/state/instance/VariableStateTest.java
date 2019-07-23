@@ -7,12 +7,6 @@
  */
 package io.zeebe.engine.state.instance;
 
-import static io.zeebe.util.buffer.BufferUtil.bufferAsString;
-import static io.zeebe.util.buffer.BufferUtil.wrapString;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-
 import io.zeebe.engine.processor.TypedRecord;
 import io.zeebe.engine.state.ZeebeState;
 import io.zeebe.engine.state.instance.VariablesState.VariableListener;
@@ -21,11 +15,6 @@ import io.zeebe.protocol.impl.record.value.workflowinstance.WorkflowInstanceReco
 import io.zeebe.protocol.record.intent.WorkflowInstanceIntent;
 import io.zeebe.test.util.MsgPackUtil;
 import io.zeebe.util.buffer.BufferUtil;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicLong;
 import org.agrona.DirectBuffer;
 import org.assertj.core.api.Assertions;
 import org.junit.After;
@@ -33,6 +22,18 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
+
+import static io.zeebe.util.buffer.BufferUtil.bufferAsString;
+import static io.zeebe.util.buffer.BufferUtil.wrapString;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class VariableStateTest {
 
@@ -318,6 +319,23 @@ public class VariableStateTest {
     // then
     final DirectBuffer varA = variablesState.getVariableLocal(parent, BufferUtil.wrapString("a"));
     MsgPackUtil.assertEquality(varA, "2");
+  }
+
+  @Test
+  public void shouldSetLocalVariable() {
+    // given
+    declareScope(parent);
+
+    // when
+    setVariableLocal(parent, wrapString("a"), MsgPackUtil.asMsgPack("1"));
+    setVariableLocal(parent, wrapString("b"), MsgPackUtil.asMsgPack("2"));
+
+    // then
+    final DirectBuffer varA = variablesState.getVariableLocal(parent, wrapString("a"));
+    MsgPackUtil.assertEquality(varA, "1");
+
+    final DirectBuffer varB = variablesState.getVariableLocal(parent, wrapString("b"));
+    MsgPackUtil.assertEquality(varB, "2");
   }
 
   @Test
