@@ -33,7 +33,7 @@ import java.util.stream.Collectors;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.groups.Tuple.tuple;
 
-public class MultiInstanceTest {
+public class MultiInstanceServiceTaskTest {
 
   @ClassRule public static final EngineRule ENGINE = EngineRule.singlePartition();
 
