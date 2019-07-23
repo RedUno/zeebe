@@ -7,6 +7,8 @@
  */
 package io.zeebe.msgpack.mapping;
 
+import org.agrona.DirectBuffer;
+
 import java.util.Arrays;
 
 public class JsonPathPointer {
@@ -19,6 +21,10 @@ public class JsonPathPointer {
 
   public String[] getPathElements() {
     return pathElements;
+  }
+
+  public DirectBuffer createDocument() {
+    return null;
   }
 
   @Override

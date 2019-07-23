@@ -198,78 +198,6 @@ public class MultiInstanceServiceTaskTest {
   }
 
   @Test
-  public void shouldSetNestedInputElementVariable() {
-    // given
-    ENGINE
-        .deployment()
-        .withXmlResource(
-            workflow(
-                b -> b.zeebeInputCollection(INPUT_COLLECTION).zeebeInputElement("nested.item")))
-        .deploy();
-
-    final long workflowInstanceKey =
-        ENGINE
-            .workflowInstance()
-            .ofBpmnProcessId(PROCESS_ID)
-            .withVariable(INPUT_COLLECTION, Arrays.asList(10, 20, 30))
-            .create();
-
-    RecordingExporter.jobRecords(JobIntent.CREATED)
-        .withWorkflowInstanceKey(workflowInstanceKey)
-        .limit(3)
-        .exists();
-
-    // when
-    ENGINE.jobs().withType(JOB_TYPE).activate();
-
-    // then
-    assertThat(
-            RecordingExporter.jobRecords(JobIntent.ACTIVATED)
-                .withWorkflowInstanceKey(workflowInstanceKey)
-                .limit(3))
-        .hasSize(3)
-        .extracting(r -> r.getValue().getVariables().get("nested"))
-        .containsExactly(
-            Collections.singletonMap("item", 10),
-            Collections.singletonMap("item", 20),
-            Collections.singletonMap("item", 30));
-  }
-
-  @Test
-  public void shouldIterateOverNestedInputCollection() {
-    // given
-    ENGINE
-        .deployment()
-        .withXmlResource(
-            workflow(b -> b.zeebeInputCollection("nested.items").zeebeInputElement(INPUT_ELEMENT)))
-        .deploy();
-
-    final long workflowInstanceKey =
-        ENGINE
-            .workflowInstance()
-            .ofBpmnProcessId(PROCESS_ID)
-            .withVariable("nested", Collections.singletonMap("items", Arrays.asList(10, 20, 30)))
-            .create();
-
-    RecordingExporter.jobRecords(JobIntent.CREATED)
-        .withWorkflowInstanceKey(workflowInstanceKey)
-        .limit(3)
-        .exists();
-
-    // when
-    ENGINE.jobs().withType(JOB_TYPE).activate();
-
-    // then
-    assertThat(
-            RecordingExporter.jobRecords(JobIntent.ACTIVATED)
-                .withWorkflowInstanceKey(workflowInstanceKey)
-                .limit(3))
-        .hasSize(3)
-        .extracting(r -> r.getValue().getVariables().get(INPUT_ELEMENT))
-        .containsExactly(10, 20, 30);
-  }
-
-  @Test
   public void shouldCompleteBodyWhenAllElementInstancesAreCompleted() {
     // given
     ENGINE.deployment().withXmlResource(WORKFLOW).deploy();
@@ -391,5 +319,77 @@ public class MultiInstanceServiceTaskTest {
         .hasSize(3)
         .flatExtracting(r -> r.getValue().getVariables().keySet())
         .containsOnly(INPUT_COLLECTION);
+  }
+
+  @Test
+  public void shouldSetNestedInputElementVariable() {
+    // given
+    ENGINE
+        .deployment()
+        .withXmlResource(
+            workflow(
+                b -> b.zeebeInputCollection(INPUT_COLLECTION).zeebeInputElement("nested.item")))
+        .deploy();
+
+    final long workflowInstanceKey =
+        ENGINE
+            .workflowInstance()
+            .ofBpmnProcessId(PROCESS_ID)
+            .withVariable(INPUT_COLLECTION, Arrays.asList(10, 20, 30))
+            .create();
+
+    RecordingExporter.jobRecords(JobIntent.CREATED)
+        .withWorkflowInstanceKey(workflowInstanceKey)
+        .limit(3)
+        .exists();
+
+    // when
+    ENGINE.jobs().withType(JOB_TYPE).activate();
+
+    // then
+    assertThat(
+            RecordingExporter.jobRecords(JobIntent.ACTIVATED)
+                .withWorkflowInstanceKey(workflowInstanceKey)
+                .limit(3))
+        .hasSize(3)
+        .extracting(r -> r.getValue().getVariables().get("nested"))
+        .containsExactly(
+            Collections.singletonMap("item", 10),
+            Collections.singletonMap("item", 20),
+            Collections.singletonMap("item", 30));
+  }
+
+  @Test
+  public void shouldIterateOverNestedInputCollection() {
+    // given
+    ENGINE
+        .deployment()
+        .withXmlResource(
+            workflow(b -> b.zeebeInputCollection("nested.items").zeebeInputElement(INPUT_ELEMENT)))
+        .deploy();
+
+    final long workflowInstanceKey =
+        ENGINE
+            .workflowInstance()
+            .ofBpmnProcessId(PROCESS_ID)
+            .withVariable("nested", Collections.singletonMap("items", Arrays.asList(10, 20, 30)))
+            .create();
+
+    RecordingExporter.jobRecords(JobIntent.CREATED)
+        .withWorkflowInstanceKey(workflowInstanceKey)
+        .limit(3)
+        .exists();
+
+    // when
+    ENGINE.jobs().withType(JOB_TYPE).activate();
+
+    // then
+    assertThat(
+            RecordingExporter.jobRecords(JobIntent.ACTIVATED)
+                .withWorkflowInstanceKey(workflowInstanceKey)
+                .limit(3))
+        .hasSize(3)
+        .extracting(r -> r.getValue().getVariables().get(INPUT_ELEMENT))
+        .containsExactly(10, 20, 30);
   }
 }
