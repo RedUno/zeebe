@@ -91,29 +91,33 @@ public class ElementActivatedHandler<T extends ExecutableFlowNode> extends Abstr
                   // TODO (saig0): don't spawn token if children are created
                   context.getElementInstanceState().spawnToken(context.getKey());
 
-                  // TODO (saig0): handle empty (not-existing) input element variable
-                  final MsgPackWriter msgPackWriter = new MsgPackWriter();
-                  final ExpandableArrayBuffer valueBuffer = new ExpandableArrayBuffer();
-                  msgPackWriter.wrap(valueBuffer, 0);
+                  loopCharacteristics
+                      .getInputElement()
+                      .ifPresent(
+                          inputElement -> {
+                            final MsgPackWriter msgPackWriter = new MsgPackWriter();
+                            final ExpandableArrayBuffer valueBuffer = new ExpandableArrayBuffer();
+                            msgPackWriter.wrap(valueBuffer, 0);
 
-                  Arrays.stream(loopCharacteristics.getInputElement().getPathElements())
-                      .skip(1) // skip document root $
-                      .forEach(
-                          path -> {
-                            msgPackWriter.writeMapHeader(1);
-                            msgPackWriter.writeString(BufferUtil.wrapString(path));
+                            Arrays.stream(inputElement.getPathElements())
+                                .skip(1) // // TODO (saig0): skip document root $
+                                .forEach(
+                                    path -> {
+                                      msgPackWriter.writeMapHeader(1);
+                                      msgPackWriter.writeString(BufferUtil.wrapString(path));
+                                    });
+
+                            msgPackWriter.writeRaw(item);
+
+                            final DirectBuffer document =
+                                new UnsafeBuffer(valueBuffer, 0, msgPackWriter.getOffset());
+                            variablesState.setVariablesLocalFromDocument(
+                                elementInstanceKey, instanceRecord.getWorkflowKey(), document);
                           });
-
-                  msgPackWriter.writeRaw(item);
-
-                  final DirectBuffer document =
-                      new UnsafeBuffer(valueBuffer, 0, msgPackWriter.getOffset());
-                  variablesState.setVariablesLocalFromDocument(
-                      elementInstanceKey, instanceRecord.getWorkflowKey(), document);
                 });
 
         if (size == 0) {
-          // TODO (saig0): handle empty input collection
+          // calling transition manually since next state is overwritten by super class
           transitionTo(context, WorkflowInstanceIntent.ELEMENT_COMPLETING);
         }
 

@@ -20,6 +20,8 @@ import io.zeebe.msgpack.jsonpath.JsonPathQuery;
 import io.zeebe.msgpack.mapping.JsonPathPointer;
 import io.zeebe.protocol.record.intent.WorkflowInstanceIntent;
 
+import java.util.Optional;
+
 public class ActivityTransformer implements ModelElementTransformer<Activity> {
   @Override
   public Class<Activity> getType() {
@@ -49,9 +51,13 @@ public class ActivityTransformer implements ModelElementTransformer<Activity> {
 
       // TODO (saig0): validate input element expression
       // TODO (saig0): extract JsonPath creation
-      // merging algorithm expect a root object $
-      final JsonPathPointer inputElementPath =
-          new JsonPathPointer(("$." + loopCharacteristics.getInputElement()).split("\\."));
+
+      final Optional<JsonPathPointer> inputElementPath =
+          Optional.ofNullable(loopCharacteristics.getInputElement())
+              .filter(e -> !e.isEmpty())
+              .map("$."::concat)
+              .map(e -> e.split("\\."))
+              .map(JsonPathPointer::new);
 
       final LoopCharacteristics activityLoopCharacteristics =
           new LoopCharacteristics(isSequential, inputCollectionQuery, inputElementPath);

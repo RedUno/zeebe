@@ -12,15 +12,17 @@ import static io.zeebe.util.buffer.BufferUtil.bufferAsString;
 import io.zeebe.msgpack.jsonpath.JsonPathQuery;
 import io.zeebe.msgpack.mapping.JsonPathPointer;
 
+import java.util.Optional;
+
 public class LoopCharacteristics {
 
   private final boolean isSequential;
 
   private final JsonPathQuery inputCollection;
-  private final JsonPathPointer inputElement;
+  private final Optional<JsonPathPointer> inputElement;
 
   public LoopCharacteristics(
-      boolean isSequential, JsonPathQuery inputCollection, JsonPathPointer inputElement) {
+      boolean isSequential, JsonPathQuery inputCollection, Optional<JsonPathPointer> inputElement) {
     this.isSequential = isSequential;
     this.inputCollection = inputCollection;
     this.inputElement = inputElement;
@@ -34,7 +36,7 @@ public class LoopCharacteristics {
     return inputCollection;
   }
 
-  public JsonPathPointer getInputElement() {
+  public Optional<JsonPathPointer> getInputElement() {
     return inputElement;
   }
 

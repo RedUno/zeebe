@@ -190,4 +190,42 @@ public class MultiInstanceTest {
                 .exists())
         .isTrue();
   }
+
+  @Test
+  public void shouldIgnoreInputElementVariableIfNotDefined() {
+    ENGINE
+        .deployment()
+        .withXmlResource(
+            Bpmn.createExecutableProcess(PROCESS_ID)
+                .startEvent()
+                .serviceTask(
+                    "task",
+                    t ->
+                        t.zeebeTaskType("test").multiInstance(m -> m.zeebeInputCollection("items")))
+                .endEvent()
+                .done())
+        .deploy();
+
+    final long workflowInstanceKey =
+        ENGINE
+            .workflowInstance()
+            .ofBpmnProcessId(PROCESS_ID)
+            .withVariable("items", Arrays.asList("a", "b", "c"))
+            .create();
+
+    RecordingExporter.jobRecords(JobIntent.CREATED)
+        .withWorkflowInstanceKey(workflowInstanceKey)
+        .limit(3)
+        .exists();
+
+    ENGINE.jobs().withType("test").activate();
+
+    assertThat(
+            RecordingExporter.jobRecords(JobIntent.ACTIVATED)
+                .withWorkflowInstanceKey(workflowInstanceKey)
+                .limit(3))
+        .hasSize(3)
+        .flatExtracting(r -> r.getValue().getVariables().keySet())
+        .containsOnly("items");
+  }
 }
