@@ -86,8 +86,7 @@ public class ActivityElementActivatingHandler<T extends ExecutableActivity>
               ErrorType.EXTRACT_VALUE_ERROR,
               String.format(
                   "Expected multi-instance input collection variable '%s' to be an ARRAY, but found '%s'.",
-                  BufferUtil.bufferAsString(variableName),
-                  results.getSingleResult().getToken().getType().name()));
+                  BufferUtil.bufferAsString(variableName), results.getSingleResult().getType()));
           return false;
         }
 

@@ -87,17 +87,21 @@ public class MsgPackQueryProcessor {
       return token.getType() == MsgPackType.INTEGER;
     }
 
+    public boolean isArray() {
+      return token.getType() == MsgPackType.ARRAY;
+    }
+
     public DirectBuffer getString() {
       if (!isString()) {
         throw new RuntimeException(
-            String.format("expected String but found '%s'", token.getType()));
+            String.format("expected STRING but found '%s'", token.getType()));
       }
       return token.getValueBuffer();
     }
 
     public DirectBuffer getLongAsString() {
       if (!isLong()) {
-        throw new RuntimeException(String.format("expected Long but found '%s'", token.getType()));
+        throw new RuntimeException(String.format("expected LONG but found '%s'", token.getType()));
       }
 
       final long key = token.getIntegerValue();
@@ -106,14 +110,9 @@ public class MsgPackQueryProcessor {
       return longResultBuffer;
     }
 
-    public boolean isArray() {
-      return token.getType() == MsgPackType.ARRAY;
-    }
-
-    // TODO (saig0): write some tests
     public int readArray(Consumer<DirectBuffer> itemConsumer) {
       if (!isArray()) {
-        throw new RuntimeException(String.format("expected Array but found '%s'", token.getType()));
+        throw new RuntimeException(String.format("expected ARRAY but found '%s'", token.getType()));
       }
 
       final int size = token.getSize();
@@ -134,8 +133,8 @@ public class MsgPackQueryProcessor {
       return size;
     }
 
-    public MsgPackToken getToken() {
-      return token;
+    public String getType() {
+      return token.getType().name();
     }
   }
 }
