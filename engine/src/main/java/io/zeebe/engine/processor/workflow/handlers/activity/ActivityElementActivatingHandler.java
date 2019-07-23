@@ -48,6 +48,7 @@ public class ActivityElementActivatingHandler<T extends ExecutableActivity>
   @Override
   protected boolean handleState(BpmnStepContext<T> context) {
 
+    // TODO (saig0): clean up MI body - inner activity delegating code
     if (context.getElement().hasLoopCharacteristics()) {
 
       if (context
