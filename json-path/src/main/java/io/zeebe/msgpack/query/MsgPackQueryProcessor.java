@@ -71,7 +71,7 @@ public class MsgPackQueryProcessor {
 
   public class QueryResult {
 
-    private final UnsafeBuffer longResultBuffer = new UnsafeBuffer();
+    private final UnsafeBuffer resultBuffer = new UnsafeBuffer();
 
     private MsgPackToken token;
 
@@ -106,11 +106,11 @@ public class MsgPackQueryProcessor {
 
       final long key = token.getIntegerValue();
       final String converted = String.valueOf(key);
-      longResultBuffer.wrap(converted.getBytes());
-      return longResultBuffer;
+      resultBuffer.wrap(converted.getBytes());
+      return resultBuffer;
     }
 
-    public int readArray(Consumer<DirectBuffer> itemConsumer) {
+    public int readArray(Consumer<DirectBuffer> elementConsumer) {
       if (!isArray()) {
         throw new RuntimeException(String.format("expected ARRAY but found '%s'", token.getType()));
       }
@@ -119,15 +119,13 @@ public class MsgPackQueryProcessor {
 
       for (int i = 0; i < size; i++) {
 
-        final int offsetBefore = reader.getOffset();
+        final int offset = reader.getOffset();
         reader.skipValue();
-        final int offsetAfter = reader.getOffset();
-        final int length = offsetAfter - offsetBefore;
+        final int length = reader.getOffset() - offset;
 
-        final UnsafeBuffer elementBuffer = new UnsafeBuffer();
-        elementBuffer.wrap(reader.getBuffer(), offsetBefore, length);
+        resultBuffer.wrap(reader.getBuffer(), offset, length);
 
-        itemConsumer.accept(elementBuffer);
+        elementConsumer.accept(resultBuffer);
       }
 
       return size;
